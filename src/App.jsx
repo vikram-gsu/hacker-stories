@@ -1,27 +1,69 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 
 function List({ list }) {
   return (
     <div>
-      {list.map((story) => (
-        <div key={story.objectID}>
-          <span>
-            <a href={story.url}>{story.title}</a>
-          </span>
-          <span>{story.author}</span>
-          <span>{story.num_comments}</span>
-          <span>{story.points}</span>
-        </div>
-      ))}
+      {list.map(
+        ({
+          objectID,
+          url,
+          title,
+          author,
+          num_comments: numComments,
+          points,
+        }) => (
+          <div key={objectID}>
+            <span>
+              <a href={url}>{title}</a>
+            </span>
+            <span>{author}</span>
+            <span>{numComments}</span>
+            <span>{points}</span>
+          </div>
+        ),
+      )}
     </div>
   );
 }
+
 List.propTypes = {
   list: PropTypes.instanceOf(Array).isRequired,
 };
 
+function Search({ searchText, onSearchTextChange }) {
+  return (
+    <label htmlFor="search">
+      Search:
+      <input
+        type="text"
+        id="search"
+        value={searchText}
+        onChange={onSearchTextChange}
+      />
+    </label>
+  );
+}
+Search.propTypes = {
+  searchText: PropTypes.string.isRequired,
+  onSearchTextChange: PropTypes.func.isRequired,
+};
+const useSemiPersistentStorage = (key, initialState) => {
+  const [value, setValue] = useState(
+    localStorage.getItem(key) || initialState,
+  );
+  useEffect(() => {
+    localStorage.setItem(key, value);
+  }, [value, key]);
+
+  return [value, setValue];
+};
+
 function App() {
+  const [searchText, setSearchText] = useSemiPersistentStorage(
+    'search',
+    'React',
+  );
   const stories = [
     {
       title: 'React',
@@ -40,13 +82,16 @@ function App() {
       objectID: 1,
     },
   ];
+  const handleSearch = (e) => {
+    setSearchText(e.target.value);
+  };
   return (
     <div>
       <h1>My hacker Stories</h1>
-      <label htmlFor="search">
-        Search:
-        <input type="text" id="search" />
-      </label>
+      <Search
+        searchText={searchText}
+        onSearchTextChange={handleSearch}
+      />
       <List list={stories} />
     </div>
   );
