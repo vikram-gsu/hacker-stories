@@ -1,4 +1,9 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useReducer,
+} from 'react';
 import PropTypes from 'prop-types';
 
 const allStories = [
@@ -20,6 +25,36 @@ const allStories = [
   },
 ];
 
+const SET_STORIES_INIT = 'SET_STORIES_INIT';
+const SET_STORIES_SUCCESS = 'SET_STORIES_SUCCESS';
+const SET_STORIES_FAILURE = 'SET_STORIES_FAILURE';
+const REMOVE_STORY = 'REMOVE_STORY';
+
+const storiesReducer = (state, action) => {
+  switch (action.type) {
+    case SET_STORIES_INIT:
+      return { ...state, isLoading: true, isError: false };
+    case SET_STORIES_SUCCESS:
+      return {
+        isLoading: false,
+        isError: false,
+        data: action.payload,
+      };
+    case SET_STORIES_FAILURE:
+      return { ...state, isLoading: false, isError: true };
+    case REMOVE_STORY:
+      return {
+        ...state,
+        data: state.data.filter(
+          (story) => story.objectID !== action.payload,
+        ),
+      };
+
+    default:
+      throw new Error();
+  }
+};
+
 const getAsyncResponses = () =>
   new Promise((resolve) =>
     setTimeout(
@@ -27,7 +62,7 @@ const getAsyncResponses = () =>
         resolve({
           data: { allStories },
         }),
-      2000,
+      3000,
     ),
   );
 function List({ stories, onRemoveItem }) {
@@ -137,18 +172,28 @@ function App() {
     'search',
     'React',
   );
-  const [stories, setStories] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(false);
+  const [stories, dispatch] = useReducer(storiesReducer, {
+    data: [],
+    isLoading: false,
+    hasError: false,
+  });
 
   useEffect(() => {
-    setIsLoading(true);
+    dispatch({
+      type: SET_STORIES_INIT,
+    });
     getAsyncResponses()
       .then((response) => {
-        setStories(response.data.allStories);
-        setIsLoading(false);
+        dispatch({
+          type: SET_STORIES_SUCCESS,
+          payload: response.data.allStories,
+        });
       })
-      .catch(() => setError(true));
+      .catch(() =>
+        dispatch({
+          type: SET_STORIES_FAILURE,
+        }),
+      );
   }, []);
 
   const handleSearch = (e) => {
@@ -156,15 +201,15 @@ function App() {
   };
 
   const handleRemoveStory = (objectID) => {
-    const newStories = stories.filter(
-      (story) => story.objectID !== objectID,
-    );
-    setStories(newStories);
+    dispatch({
+      type: REMOVE_STORY,
+      payload: objectID,
+    });
   };
 
   const searchedStories = useMemo(
     () =>
-      stories.filter((story) =>
+      stories.data.filter((story) =>
         story.title.toLowerCase().includes(searchText.toLowerCase()),
       ),
     [searchText, stories],
@@ -172,7 +217,7 @@ function App() {
 
   return (
     <div>
-      {error && <p>Something went wrong...</p>}
+      {stories.hasError && <p>Something went wrong...</p>}
 
       <div>
         <h1>My hacker Stories</h1>
@@ -183,7 +228,7 @@ function App() {
         >
           Search:
         </InputWithLabel>
-        {isLoading ? (
+        {stories.isLoading ? (
           <p>Loading...</p>
         ) : (
           <List
