@@ -20,6 +20,16 @@ const allStories = [
   },
 ];
 
+const getAsyncResponses = () =>
+  new Promise((resolve) =>
+    setTimeout(
+      () =>
+        resolve({
+          data: { allStories },
+        }),
+      2000,
+    ),
+  );
 function List({ stories, onRemoveItem }) {
   return (
     <ul>
@@ -127,7 +137,19 @@ function App() {
     'search',
     'React',
   );
-  const [stories, setStories] = useState(allStories);
+  const [stories, setStories] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    setIsLoading(true);
+    getAsyncResponses()
+      .then((response) => {
+        setStories(response.data.allStories);
+        setIsLoading(false);
+      })
+      .catch(() => setError(true));
+  }, []);
 
   const handleSearch = (e) => {
     setSearchText(e.target.value);
@@ -150,18 +172,26 @@ function App() {
 
   return (
     <div>
-      <h1>My hacker Stories</h1>
-      <InputWithLabel
-        id="search"
-        value={searchText}
-        onValueChange={handleSearch}
-      >
-        Search:
-      </InputWithLabel>
-      <List
-        stories={searchedStories}
-        onRemoveItem={handleRemoveStory}
-      />
+      {error && <p>Something went wrong...</p>}
+
+      <div>
+        <h1>My hacker Stories</h1>
+        <InputWithLabel
+          id="search"
+          value={searchText}
+          onValueChange={handleSearch}
+        >
+          Search:
+        </InputWithLabel>
+        {isLoading ? (
+          <p>Loading...</p>
+        ) : (
+          <List
+            stories={searchedStories}
+            onRemoveItem={handleRemoveStory}
+          />
+        )}
+      </div>
     </div>
   );
 }
