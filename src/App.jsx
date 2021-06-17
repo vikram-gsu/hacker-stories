@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 
 const allStories = [
@@ -20,11 +20,15 @@ const allStories = [
   },
 ];
 
-function List({ stories }) {
+function List({ stories, onRemoveItem }) {
   return (
     <ul>
-      {stories.map(({ objectID, ...story }) => (
-        <ListItem key={objectID} story={story} />
+      {stories.map((story) => (
+        <ListItem
+          key={story.objectID}
+          story={story}
+          onRemoveItem={onRemoveItem}
+        />
       ))}
     </ul>
   );
@@ -32,10 +36,19 @@ function List({ stories }) {
 
 List.propTypes = {
   stories: PropTypes.instanceOf(Array).isRequired,
+  onRemoveItem: PropTypes.func.isRequired,
 };
 
 function ListItem({
-  story: { url, title, author, num_comments: numComments, points },
+  story: {
+    url,
+    objectID,
+    title,
+    author,
+    num_comments: numComments,
+    points,
+  },
+  onRemoveItem,
 }) {
   return (
     <li>
@@ -45,6 +58,11 @@ function ListItem({
       <span>{author}</span>
       <span>{numComments}</span>
       <span>{points}</span>
+      <span>
+        <button type="button" onClick={() => onRemoveItem(objectID)}>
+          Dismiss
+        </button>
+      </span>
     </li>
   );
 }
@@ -52,30 +70,47 @@ function ListItem({
 ListItem.propTypes = {
   story: PropTypes.shape({
     url: PropTypes.string.isRequired,
+    objectID: PropTypes.number.isRequired,
     title: PropTypes.string.isRequired,
     author: PropTypes.string.isRequired,
     num_comments: PropTypes.number.isRequired,
     points: PropTypes.number.isRequired,
   }).isRequired,
+  onRemoveItem: PropTypes.func.isRequired,
 };
 
-function Search({ searchText, onSearchTextChange }) {
+function InputWithLabel({
+  id,
+  children,
+  value,
+  type,
+  onValueChange,
+}) {
   return (
-    <label htmlFor="search">
-      Search:
+    <label htmlFor={id}>
+      {children} &nbsp;
       <input
-        type="text"
-        id="search"
-        value={searchText}
-        onChange={onSearchTextChange}
+        type={type}
+        id={id}
+        value={value}
+        onChange={onValueChange}
       />
     </label>
   );
 }
-Search.propTypes = {
-  searchText: PropTypes.string.isRequired,
-  onSearchTextChange: PropTypes.func.isRequired,
+
+InputWithLabel.propTypes = {
+  id: PropTypes.string.isRequired,
+  children: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+  type: PropTypes.string,
+  onValueChange: PropTypes.func.isRequired,
 };
+
+InputWithLabel.defaultProps = {
+  type: 'text',
+};
+
 const useSemiPersistentStorage = (key, initialState) => {
   const [value, setValue] = useState(
     localStorage.getItem(key) || initialState,
@@ -92,22 +127,41 @@ function App() {
     'search',
     'React',
   );
+  const [stories, setStories] = useState(allStories);
 
   const handleSearch = (e) => {
     setSearchText(e.target.value);
   };
 
-  const searchedStories = allStories.filter(({ title }) =>
-    title.toLowerCase().includes(searchText.toLowerCase()),
+  const handleRemoveStory = (objectID) => {
+    const newStories = stories.filter(
+      (story) => story.objectID !== objectID,
+    );
+    setStories(newStories);
+  };
+
+  const searchedStories = useMemo(
+    () =>
+      stories.filter((story) =>
+        story.title.toLowerCase().includes(searchText.toLowerCase()),
+      ),
+    [searchText, stories],
   );
+
   return (
     <div>
       <h1>My hacker Stories</h1>
-      <Search
-        searchText={searchText}
-        onSearchTextChange={handleSearch}
+      <InputWithLabel
+        id="search"
+        value={searchText}
+        onValueChange={handleSearch}
+      >
+        Search:
+      </InputWithLabel>
+      <List
+        stories={searchedStories}
+        onRemoveItem={handleRemoveStory}
       />
-      <List stories={searchedStories} />
     </div>
   );
 }
