@@ -1,29 +1,29 @@
 import React, {
   useEffect,
   useState,
-  useMemo,
   useReducer,
+  useCallback,
 } from 'react';
 import PropTypes from 'prop-types';
 
-const allStories = [
-  {
-    title: 'React',
-    url: 'https://reactjs.org/',
-    author: 'Jordan Walke',
-    num_comments: 3,
-    points: 4,
-    objectID: 0,
-  },
-  {
-    title: 'Redux',
-    url: 'https://redux.js.org/',
-    author: 'Dan Abramov, Andrew Clark',
-    num_comments: 2,
-    points: 5,
-    objectID: 1,
-  },
-];
+// const allStories = [
+//   {
+//     title: 'React',
+//     url: 'https://reactjs.org/',
+//     author: 'Jordan Walke',
+//     num_comments: 3,
+//     points: 4,
+//     objectID: 0,
+//   },
+//   {
+//     title: 'Redux',
+//     url: 'https://redux.js.org/',
+//     author: 'Dan Abramov, Andrew Clark',
+//     num_comments: 2,
+//     points: 5,
+//     objectID: 1,
+//   },
+// ];
 
 const SET_STORIES_INIT = 'SET_STORIES_INIT';
 const SET_STORIES_SUCCESS = 'SET_STORIES_SUCCESS';
@@ -33,15 +33,15 @@ const REMOVE_STORY = 'REMOVE_STORY';
 const storiesReducer = (state, action) => {
   switch (action.type) {
     case SET_STORIES_INIT:
-      return { ...state, isLoading: true, isError: false };
+      return { ...state, isLoading: true, hasError: false };
     case SET_STORIES_SUCCESS:
       return {
         isLoading: false,
-        isError: false,
+        hasError: false,
         data: action.payload,
       };
     case SET_STORIES_FAILURE:
-      return { ...state, isLoading: false, isError: true };
+      return { ...state, isLoading: false, hasError: true };
     case REMOVE_STORY:
       return {
         ...state,
@@ -55,16 +55,6 @@ const storiesReducer = (state, action) => {
   }
 };
 
-const getAsyncResponses = () =>
-  new Promise((resolve) =>
-    setTimeout(
-      () =>
-        resolve({
-          data: { allStories },
-        }),
-      3000,
-    ),
-  );
 function List({ stories, onRemoveItem }) {
   return (
     <ul>
@@ -115,7 +105,7 @@ function ListItem({
 ListItem.propTypes = {
   story: PropTypes.shape({
     url: PropTypes.string.isRequired,
-    objectID: PropTypes.number.isRequired,
+    objectID: PropTypes.string.isRequired,
     title: PropTypes.string.isRequired,
     author: PropTypes.string.isRequired,
     num_comments: PropTypes.number.isRequired,
@@ -167,6 +157,8 @@ const useSemiPersistentStorage = (key, initialState) => {
   return [value, setValue];
 };
 
+const API_ENDPOINT = 'https://hn.algolia.com/api/v1/search?query=';
+
 function App() {
   const [searchText, setSearchText] = useSemiPersistentStorage(
     'search',
@@ -178,23 +170,29 @@ function App() {
     hasError: false,
   });
 
-  useEffect(() => {
+  const handleStoriesFetch = useCallback(() => {
+    if (!searchText) return;
     dispatch({
       type: SET_STORIES_INIT,
     });
-    getAsyncResponses()
-      .then((response) => {
+
+    fetch(`${API_ENDPOINT}${searchText}`)
+      .then((response) => response.json())
+      .then((result) =>
         dispatch({
-          type: SET_STORIES_SUCCESS,
-          payload: response.data.allStories,
-        });
-      })
+          type: 'SET_STORIES_SUCCESS',
+          payload: result.hits,
+        }),
+      )
       .catch(() =>
         dispatch({
           type: SET_STORIES_FAILURE,
         }),
       );
-  }, []);
+  }, [searchText]);
+  useEffect(() => {
+    handleStoriesFetch();
+  }, [handleStoriesFetch]);
 
   const handleSearch = (e) => {
     setSearchText(e.target.value);
@@ -207,13 +205,14 @@ function App() {
     });
   };
 
-  const searchedStories = useMemo(
-    () =>
-      stories.data.filter((story) =>
-        story.title.toLowerCase().includes(searchText.toLowerCase()),
-      ),
-    [searchText, stories],
-  );
+  // const searchedStories = useMemo(
+  //   () =>
+  //     console.log(stories) ||
+  //     stories.data.filter((story) =>
+  //       story.title.toLowerCase().includes(searchText.toLowerCase()),
+  //     ),
+  //   [searchText, stories],
+  // );
 
   return (
     <div>
@@ -232,7 +231,7 @@ function App() {
           <p>Loading...</p>
         ) : (
           <List
-            stories={searchedStories}
+            stories={stories.data}
             onRemoveItem={handleRemoveStory}
           />
         )}
