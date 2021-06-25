@@ -5,7 +5,7 @@ import React, {
   useCallback,
 } from 'react';
 import PropTypes from 'prop-types';
-
+import axios from 'axios';
 // const allStories = [
 //   {
 //     title: 'React',
@@ -157,6 +157,31 @@ const useSemiPersistentStorage = (key, initialState) => {
   return [value, setValue];
 };
 
+const SearchForm = ({
+  handleSearchClick,
+  handleSearch,
+  searchText,
+}) => (
+  <form onSubmit={handleSearchClick}>
+    <h1>My hacker Stories</h1>
+    <InputWithLabel
+      id="search"
+      value={searchText}
+      onValueChange={handleSearch}
+    >
+      Search:
+    </InputWithLabel>
+    <button type="submit" disabled={!searchText}>
+      Search
+    </button>
+  </form>
+);
+
+SearchForm.propTypes = {
+  handleSearchClick: PropTypes.func.isRequired,
+  handleSearch: PropTypes.func.isRequired,
+  searchText: PropTypes.string.isRequired,
+};
 const API_ENDPOINT = 'https://hn.algolia.com/api/v1/search?query=';
 
 function App() {
@@ -169,40 +194,44 @@ function App() {
     isLoading: false,
     hasError: false,
   });
+  const [url, setUrl] = useState(`${API_ENDPOINT}${searchText}`);
 
-  const handleStoriesFetch = useCallback(() => {
-    if (!searchText) return;
+  const handleStoriesFetch = useCallback(async () => {
     dispatch({
       type: SET_STORIES_INIT,
     });
 
-    fetch(`${API_ENDPOINT}${searchText}`)
-      .then((response) => response.json())
-      .then((result) =>
-        dispatch({
-          type: 'SET_STORIES_SUCCESS',
-          payload: result.hits,
-        }),
-      )
-      .catch(() =>
-        dispatch({
-          type: SET_STORIES_FAILURE,
-        }),
-      );
-  }, [searchText]);
+    try {
+      const { data } = await axios.get(url);
+      dispatch({
+        type: 'SET_STORIES_SUCCESS',
+        payload: data.hits,
+      });
+    } catch (e) {
+      dispatch({
+        type: SET_STORIES_FAILURE,
+      });
+    }
+  }, [url]);
+
   useEffect(() => {
     handleStoriesFetch();
   }, [handleStoriesFetch]);
-
-  const handleSearch = (e) => {
-    setSearchText(e.target.value);
-  };
 
   const handleRemoveStory = (objectID) => {
     dispatch({
       type: REMOVE_STORY,
       payload: objectID,
     });
+  };
+
+  const handleSearchClick = (event) => {
+    setUrl(`${API_ENDPOINT}${searchText}`);
+    event.preventDefault();
+  };
+
+  const handleSearch = (e) => {
+    setSearchText(e.target.value);
   };
 
   // const searchedStories = useMemo(
@@ -217,25 +246,19 @@ function App() {
   return (
     <div>
       {stories.hasError && <p>Something went wrong...</p>}
-
-      <div>
-        <h1>My hacker Stories</h1>
-        <InputWithLabel
-          id="search"
-          value={searchText}
-          onValueChange={handleSearch}
-        >
-          Search:
-        </InputWithLabel>
-        {stories.isLoading ? (
-          <p>Loading...</p>
-        ) : (
-          <List
-            stories={stories.data}
-            onRemoveItem={handleRemoveStory}
-          />
-        )}
-      </div>
+      <SearchForm
+        handleSearch={handleSearch}
+        handleSearchClick={handleSearchClick}
+        searchText={searchText}
+      />
+      {stories.isLoading ? (
+        <p>Loading...</p>
+      ) : (
+        <List
+          stories={stories.data}
+          onRemoveItem={handleRemoveStory}
+        />
+      )}
     </div>
   );
 }
