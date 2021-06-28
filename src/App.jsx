@@ -6,24 +6,6 @@ import React, {
 } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
-// const allStories = [
-//   {
-//     title: 'React',
-//     url: 'https://reactjs.org/',
-//     author: 'Jordan Walke',
-//     num_comments: 3,
-//     points: 4,
-//     objectID: 0,
-//   },
-//   {
-//     title: 'Redux',
-//     url: 'https://redux.js.org/',
-//     author: 'Dan Abramov, Andrew Clark',
-//     num_comments: 2,
-//     points: 5,
-//     objectID: 1,
-//   },
-// ];
 
 const SET_STORIES_INIT = 'SET_STORIES_INIT';
 const SET_STORIES_SUCCESS = 'SET_STORIES_SUCCESS';
@@ -105,7 +87,7 @@ function ListItem({
 ListItem.propTypes = {
   story: PropTypes.shape({
     url: PropTypes.string.isRequired,
-    objectID: PropTypes.string.isRequired,
+    objectID: PropTypes.number.isRequired,
     title: PropTypes.string.isRequired,
     author: PropTypes.string.isRequired,
     num_comments: PropTypes.number.isRequired,
@@ -264,3 +246,5 @@ function App() {
 }
 
 export default App;
+
+export { storiesReducer, InputWithLabel, SearchForm, List, ListItem };
