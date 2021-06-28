@@ -4,6 +4,7 @@ import {
   screen,
   fireEvent,
   act,
+  within,
 } from '@testing-library/react';
 import App, {
   storiesReducer,
@@ -31,6 +32,46 @@ const storyTwo = {
 };
 
 const stories = [storyOne, storyTwo];
+
+describe('List component', () => {
+  it('renders all list items', () => {
+    render(<List stories={stories} onRemoveItem={jest.fn()} />);
+
+    const renderedList = screen.getByRole('list');
+    const { getAllByRole } = within(renderedList);
+    const items = getAllByRole('listitem');
+
+    expect(items.length).toBe(2);
+  });
+});
+
+describe('InputWithLabel component', () => {
+  const inputProps = {
+    id: 'search',
+    children: 'Search:',
+    value: 'React',
+    type: 'text',
+    onValueChange: jest.fn(),
+  };
+  it('renders all properties', () => {
+    // eslint-disable-next-line react/jsx-props-no-spreading
+    render(<InputWithLabel {...inputProps} />);
+
+    expect(screen.getByLabelText(/Search/)).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/React/)).toBeInTheDocument();
+  });
+
+  it('invokes onChange event', () => {
+    // eslint-disable-next-line react/jsx-props-no-spreading
+    render(<InputWithLabel {...inputProps} />);
+
+    fireEvent.change(screen.getByDisplayValue(/React/), {
+      target: { value: 'Redux' },
+    });
+
+    expect(inputProps.onValueChange).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('storiesReducer', () => {
   it('initializes state', () => {
@@ -180,12 +221,12 @@ describe('SearchForm', () => {
     expect(searchProps.handleSearch).toHaveBeenCalledTimes(1);
   });
 
-  test('handles form submit event', ()=> {
+  test('handles form submit event', () => {
     // eslint-disable-next-line react/jsx-props-no-spreading
     render(<SearchForm {...searchProps} />);
 
     fireEvent.submit(screen.getByRole('button'));
 
     expect(searchProps.handleSearchClick).toHaveBeenCalledTimes(1);
-  })
+  });
 });
