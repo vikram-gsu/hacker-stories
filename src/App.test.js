@@ -6,6 +6,7 @@ import {
   act,
   within,
 } from '@testing-library/react';
+import axios from 'axios';
 import App, {
   storiesReducer,
   InputWithLabel,
@@ -13,6 +14,8 @@ import App, {
   List,
   ListItem,
 } from './App';
+
+jest.mock('axios');
 
 const storyOne = {
   title: 'React',
@@ -228,5 +231,26 @@ describe('SearchForm', () => {
     fireEvent.submit(screen.getByRole('button'));
 
     expect(searchProps.handleSearchClick).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('App', () => {
+  test('succeeds fetching data', async () => {
+    const promise = Promise.resolve({
+      data: { hits: stories },
+    });
+
+    axios.get.mockImplementationOnce(() => promise);
+
+    render(<App />);
+
+    screen.debug();
+
+    expect(screen.queryByText(/Loading/)).toBeInTheDocument();
+    await act(() => promise);
+
+    expect(screen.queryByText(/Loading/)).toBeNull();
+
+    screen.debug();
   });
 });
